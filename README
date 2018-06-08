@@ -1,0 +1,65 @@
+# Introduction
+
+This module allows tracing memory allocations.
+
+# Usage
+
+The module returns a single function that takes a single file name as
+argument. When called, it replaces the Lua memory allocation function
+with one that logs what it does to the file. It returns a function that
+restores the original allocator.
+
+``` {.lua}
+undo = require "mtrace" "/tmp/mtrace.log"
+```
+
+# Log format
+
+Tho log file will contain output similar to that of `mtrace(3)`:
+
+        filename  op     address    size type
+    @ ./test.lua:1 + 0x557e2af32450 0x80 t
+    @ ./test.lua:1 + 0x557e2af32450 0x40 s
+    @ ./test.lua:2 < 0x557e2af32450
+    @ ./test.lua:2 > 0x557e2af32450 0x100
+    @ ./test.lua:3 - 0x557e2af32450
+
+The main difference from what is produced by `mtrace(3)` is that
+allocations have an additional field describing the Lua type allocated.
+
+## Operations
+
+`+`
+:   New allocation
+
+`-`
+:   Freeing of memory
+
+`<` and `>`
+:   Allocation resize
+
+## Types
+
+`s`
+:   string
+
+`t`
+:   table
+
+`f`
+:   function / closure
+
+`u`
+:   userdata
+
+`c`
+:   coroutine / thread
+
+# Known issues
+
+-   Early allocations from before the module is enabled will not be
+    logged. The C code can be copied into a program that does Lua state
+    initialization and uses the logging allocator from the start.
+-   The Lua application may crash during shutdown if the original
+    allocator is not restored. This can be bypassed by calling
+    `os.exit()`.
